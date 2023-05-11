@@ -1,6 +1,6 @@
 <template>
-  <div id="wrapper" ref="wrapper" @click.self="reset">
-    <span id="typer" ref="typer" contenteditable @input="typeIt" @keydown="moveIt" @click="select" spellcheck="false"></span> 
+  <div id="wrapper" ref="wrapper" @click.self="reset" @load="reset">
+    <span id="typer" ref="typer" contenteditable @keydown="moveIt" @input="typeIt" @click="select" spellcheck="false"></span> 
     <p id="display" ref="display" >{{ txt }}</p>
   </div>
 </template>
@@ -20,57 +20,79 @@ var caretPos = 0
 
 function incCaretPos() { if (caretPos < typer.value.innerText.length) caretPos++ }
 function decCaretPos() { if (caretPos > 0) caretPos-- }
+function backSpace() {
+  if (caretPos > 0) {
+    caretPos = caretPos - 2
+  }
+}
 
 function reset() {
-  typer.focus
+  typer.value.focus()
   caretPos = typer.value.innerText.length
   txt.value = typer.value.innerText
-    console.log(typer.value.innerText)
-    console.log(txt.value)
 }
+
 
 function typeIt() {
   incCaretPos()
   txt.value = typer.value.innerText.substring(0, caretPos)
-
+  
   //------handles wrapping text------\\
   const typerHeight = typer.value.offsetHeight
   const fontSize = parseInt(window.getComputedStyle(typer.value).getPropertyValue('font-size'))
   var x = Math.floor(typerHeight / fontSize) - 1
   var dispOffset = -(2 * fontSize) - (x * fontSize) + 'px'
+  var wrapHeight = fontSize + (x * fontSize) + 'px'
   document.querySelector(':root').style.setProperty('--display-offset', dispOffset)
+  document.querySelector(':root').style.setProperty('--wrapper-height', wrapHeight)
 }
+
 
 function moveIt(e) {
   if (e.keyCode == 37) { //------left arrow
     decCaretPos()
-      console.log(caretPos)
     txt.value = display.value.innerText.substring(0, display.value.innerText.length - 1)
   }
   if (e.keyCode == 39) { //-----right arrow
     incCaretPos()
-      console.log(caretPos)
     txt.value = typer.value.innerText.substring(0, caretPos)
   }
-  if (e.keyCode == 8) { //------backspace
-    decCaretPos()
-    if (selected.value) {
+   if (e.keyCode == 8) { //------backspace
+    backSpace()
+    txt.value = typer.value.innerText.substring(0, caretPos)
+    if (selected) {
       caretPos = selection.anchorOffset - 1 //------handles selection deletion
       txt.value = typer.value.innerText.substring(0, caretPos)
     }
   }
+  if (e.keyCode == 13) { //------enter text
+    typer.value.blur()
+    enter(typer.value.innerText)
+  }
+  
+
 }
+
+
+//------emits------\\
+const emit = defineEmits(['enter'])
+const enter = (value) => {
+  emit('enter', value)
+}
+
+
 var selection = window.getSelection()
-var selected = ref(false)
+var selected = false
+
 function select() {
   caretPos = selection.focusOffset //------update caretPos
-  if (caretPos !== selection.anchorOffset) selected.value = true //------selected range
+  if (caretPos !== selection.anchorOffset) selected = true //------selected range
   txt.value = typer.value.innerText.substring(0, caretPos) //------update txt
  
     console.log(selection.focusNode.data[selection.focusOffset]) //------shows which char was selected
     console.log(caretPos)
 
-  console.log(selected.value)
+  console.log(selected)
     
 }
 
@@ -89,7 +111,7 @@ onMounted(()=> {
   if (props.bBottom) root.style.setProperty('--border-bottom', props.bBottom)
   if (props.bLeft) root.style.setProperty('--border-left', props.bLeft)
   if (props.bRadius) root.style.setProperty('--border-radius', props.bRadius)
-  
+  reset()
 })
 </script>
 
@@ -100,9 +122,10 @@ onMounted(()=> {
   --font-size: 24px;
   --txt-color: rgb(207,207,207);
   --display-offset: -48px;
+  --wrapper-height: -24px;
 
   --width-c: 11px;
-  --height-c: 18px;
+  --height-c: 20px;
   --color-c: ;
   --content-c: ;
 
@@ -123,9 +146,9 @@ onMounted(()=> {
 #display {
   font-size: var(--font-size);
   outline: none;
-  color: transparent;
+  color: yellow;
   position: relative;
-  top: var(--display-offset);
+  top: 0px;
   z-index: -1000;
   overflow-wrap: break-word;
 }
@@ -139,7 +162,7 @@ onMounted(()=> {
   border-radius: var(--border-radius);
 
   position: relative;
-  top: 0.5px;
+  top: 1px;
   animation: blink 1s infinite;
 }
 @keyframes blink {
@@ -151,9 +174,9 @@ onMounted(()=> {
 #typer:focus + #display::after { /* CARET */
   display: inline-block;
 }
-#wrappper {
+#wrapper {
   width: 100%;
-  height: var(--font-size);
+  height: var(--wrapper-height);
   z-index: -1000;
 }
 </style>
