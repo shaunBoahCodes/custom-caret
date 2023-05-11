@@ -146,9 +146,9 @@ onMounted(()=> {
 #display {
   font-size: var(--font-size);
   outline: none;
-  color: yellow;
+  color: transparent;
   position: relative;
-  top: 0px;
+  top: var(--display-offset);
   z-index: -1000;
   overflow-wrap: break-word;
 }
